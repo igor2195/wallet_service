@@ -1,7 +1,7 @@
 package com.example.wallet_task.service.mapper;
 
 import com.example.wallet_task.domain.Wallet;
-import com.example.wallet_task.model.WalletResponseDto;
+import com.example.wallet_task.model.BalanceResponseDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -9,5 +9,5 @@ import org.mapstruct.Mapping;
 public interface WalletToWalletResponseDtoMapper {
 
     @Mapping(source = "id", target = "walletId")
-    WalletResponseDto toDto (Wallet wallet);
+    BalanceResponseDto toDto (Wallet wallet);
 }

@@ -1,30 +1,54 @@
 server:
-  port: 9999
+  port: ${APP_PORT:8080}
   servlet:
     context-path: /wallet-service/api/
+
+app:
+  wallet:
+    retry:
+      max-attempts: ${WALLET_RETRY_MAX_ATTEMPTS:5}
+      delay: ${WALLET_RETRY_DELAY:100}
+      multiplier: ${WALLET_RETRY_MULTIPLIER:2}
+      max-delay: ${WALLET_RETRY_MAX_DELAY:5000}
+
 
 spring:
   application:
     name: "wallet_task"
   datasource:
-    driver-class-name: org.postgresql.Driver
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wallet}
     username: ${SPRING_DATASOURCE_USERNAME:myuser}
     password: ${SPRING_DATASOURCE_PASSWORD:secret}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:50}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+      leak-detection-threshold: ${DB_LEAK_DETECTION:60000}
+      pool-name: "WalletHikariCP"
+      validation-timeout: 5000
+      connection-test-query: "SELECT 1"
+
   jpa:
     hibernate:
-      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        show_sql: true
-        format_sql: true
+        show_sql: ${HIBERNATE_SHOW_SQL:false}
+        format_sql: ${HIBERNATE_FORMAT_SQL:false}
+        jdbc:
+          batch_size: ${HIBERNATE_BATCH_SIZE:20}
+          fetch_size: ${HIBERNATE_FETCH_SIZE:50}
+        connection:
+          autocommit: false
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
     open-in-view: false
 
   liquibase:
-    enabled: true  # Включаем Liquibase
-    change-log: classpath:db/liquibase/db.changelog-master.xml
-  logging:
-    level:
-      liquibase: DEBUG
-      org.springframework.boot.autoconfigure.liquibase: DEBUG
+    enabled: ${LIQUIBASE_ENABLED:true}
+    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/liquibase/db.changelog-master.xml}

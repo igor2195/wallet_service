@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class WalletResponseDto {
+public class BalanceResponseDto {
     /**
      * Идинтификатор кошелька
      */

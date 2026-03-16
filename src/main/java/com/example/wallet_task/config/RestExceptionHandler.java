@@ -2,6 +2,7 @@ package com.example.wallet_task.config;
 
 import com.example.wallet_task.model.exception.BaseException;
 import com.example.wallet_task.model.exception.InsufficientFundsException;
+import com.example.wallet_task.model.exception.OperationUnavailableException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -33,6 +34,11 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<Object> handleInsufficientFundsException(InsufficientFundsException e) {
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(OperationUnavailableException.class)
+    public ResponseEntity<Object> handleOperationUnavailableException(OperationUnavailableException e) {
         return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

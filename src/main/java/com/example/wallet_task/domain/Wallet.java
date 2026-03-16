@@ -31,4 +31,8 @@ public class Wallet {
      */
     @Column(nullable = false)
     private BigDecimal balance = BigDecimal.ZERO;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 }

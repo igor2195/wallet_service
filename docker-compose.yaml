@@ -3,11 +3,11 @@ services:
     image: postgres:15-alpine
     container_name: wallet-postgres
     environment:
-      POSTGRES_DB: wallet
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -24,15 +24,36 @@ services:
     build: .
     container_name: wallet-app
     ports:
-      - "8080:8080"
+      - "${APP_PORT}:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wallet
-      SPRING_DATASOURCE_USERNAME: myuser
-      SPRING_DATASOURCE_PASSWORD: secret
-      SPRING_LIQUIBASE_ENABLED: "true"
-      SPRING_LIQUIBASE_CHANGE_LOG: classpath:db/liquibase/db.changelog-master.xml
-      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      LOGGING_LEVEL_LIQUIBASE: DEBUG
+      #DATASOURCE
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      #HikariCP
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE}
+      DB_CONNECTION_TIMEOUT: ${DB_CONNECTION_TIMEOUT}
+      DB_IDLE_TIMEOUT: ${DB_IDLE_TIMEOUT}
+      DB_MAX_LIFETIME: ${DB_MAX_LIFETIME}
+      DB_LEAK_DETECTION: ${DB_LEAK_DETECTION}
+
+      #Retry
+      WALLET_RETRY_MAX_ATTEMPTS: ${WALLET_RETRY_MAX_ATTEMPTS}
+      WALLET_RETRY_DELAY: ${WALLET_RETRY_DELAY}
+      WALLET_RETRY_MULTIPLIER: ${WALLET_RETRY_MULTIPLIER}
+      WALLET_RETRY_MAX_DELAY: ${WALLET_RETRY_MAX_DELAY}
+
+      #Hibernate
+      HIBERNATE_BATCH_SIZE: ${HIBERNATE_BATCH_SIZE}
+      HIBERNATE_FETCH_SIZE: ${HIBERNATE_FETCH_SIZE}
+      HIBERNATE_SHOW_SQL: ${HIBERNATE_SHOW_SQL}
+      HIBERNATE_FORMAT_SQL: ${HIBERNATE_FORMAT_SQL}
+
+      #Liquibase
+      SPRING_LIQUIBASE_ENABLED: ${LIQUIBASE_ENABLED}
+      SPRING_LIQUIBASE_CHANGE_LOG: ${LIQUIBASE_CHANGE_LOG}
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,3 +67,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+    labels:
+      com.wallet.description: "PostgreSQL data volume"
