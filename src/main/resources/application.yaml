@@ -51,4 +51,6 @@ spring:
 
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
-    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/liquibase/db.changelog-master.xml}
+    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/liquibase/db.changelog-master.xml
+
+

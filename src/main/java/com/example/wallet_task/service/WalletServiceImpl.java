@@ -6,7 +6,7 @@ import com.example.wallet_task.model.OperationRequestDto;
 import com.example.wallet_task.model.exception.InsufficientFundsException;
 import com.example.wallet_task.model.exception.OperationUnavailableException;
 import com.example.wallet_task.repository.WalletRepository;
-import com.example.wallet_task.service.mapper.WalletToWalletResponseDtoMapper;
+import com.example.wallet_task.service.mapper.WalletToBalanceResponseDtoMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,7 @@ public class WalletServiceImpl implements WalletService {
     private static final String PROCESS_FAILED = "failed to process operation after retries for wallet {}: {}";
 
     private final WalletRepository walletRepository;
-    private final WalletToWalletResponseDtoMapper mapper;
+    private final WalletToBalanceResponseDtoMapper mapper;
 
     @Override
     @Transactional

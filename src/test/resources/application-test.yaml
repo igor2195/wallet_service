@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:15-alpine:///wallet
+    username: user
+    password: password
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 30000
+  jpa:
+    show-sql: true
+  liquibase:
+    change-log: classpath:db/liquibase/changelog-test.xml
+    contexts: test
+    enabled: true
+    defaultSchema: public
