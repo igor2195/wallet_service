@@ -9,5 +9,5 @@ import org.mapstruct.Mapping;
 public interface WalletToBalanceResponseDtoMapper {
 
     @Mapping(source = "id", target = "walletId")
-    BalanceResponseDto toDto (Wallet wallet);
+    BalanceResponseDto toDto(Wallet wallet);
 }

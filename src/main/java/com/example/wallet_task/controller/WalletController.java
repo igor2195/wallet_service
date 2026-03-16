@@ -3,7 +3,6 @@ package com.example.wallet_task.controller;
 import com.example.wallet_task.model.BalanceResponseDto;
 import com.example.wallet_task.model.OperationRequestDto;
 import com.example.wallet_task.service.WalletService;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
