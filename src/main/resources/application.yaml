@@ -1,3 +1,30 @@
+server:
+  port: 9999
+  servlet:
+    context-path: /wallet-service/api/
+
 spring:
   application:
-    name: wallet_task
+    name: "wallet_task"
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wallet}
+    username: ${SPRING_DATASOURCE_USERNAME:myuser}
+    password: ${SPRING_DATASOURCE_PASSWORD:secret}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+        format_sql: true
+    open-in-view: false
+
+  liquibase:
+    enabled: true  # Включаем Liquibase
+    change-log: classpath:db/liquibase/db.changelog-master.xml
+  logging:
+    level:
+      liquibase: DEBUG
+      org.springframework.boot.autoconfigure.liquibase: DEBUG

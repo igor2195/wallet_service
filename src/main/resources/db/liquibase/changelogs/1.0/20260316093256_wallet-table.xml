@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="create-wallet-table" author="igor-nejivlyak">
+        <sql>
+            CREATE TABLE IF NOT EXISTS public.wallet
+            (
+                id            UUID    PRIMARY KEY,
+                balance               DECIMAL(19,2) NOT NULL
+            );
+
+            COMMENT
+            ON COLUMN wallet.id IS 'Идентификатор кошелька';
+            COMMENT
+            ON COLUMN wallet.balance IS 'Баланс';
+        </sql>
+    </changeSet>
+</databaseChangeLog>

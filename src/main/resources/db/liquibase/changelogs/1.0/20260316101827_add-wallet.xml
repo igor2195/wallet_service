@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="add-wallet" author="igor-nejivlyak">
+
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="wallet" schemaName="public"/>
+        </preConditions>
+
+        <sql>
+            INSERT INTO public.wallet (id, balance)
+            SELECT 'a07cd10c-fe74-4ee2-abe8-474b90db7130', 1000.00
+                WHERE NOT EXISTS (
+            SELECT 1 FROM public.wallet
+            WHERE id = 'a07cd10c-fe74-4ee2-abe8-474b90db7130'
+        );
+        </sql>
+    </changeSet>
+</databaseChangeLog>
