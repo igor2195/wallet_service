@@ -1,5 +1,6 @@
 package com.example.wallet_task.model.exception;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -13,20 +14,15 @@ import java.time.Instant;
 @Data
 @Builder
 @RequiredArgsConstructor
+@Schema(description = "Базовый клас для исключений сервиса")
 public class BaseException {
 
-    /**
-     * HTTP статус ответа
-     */
+    @Schema(description = "Статус ответа в текстовом формате")
     private final HttpStatus status;
 
-    /**
-     * Текст ошибки
-     */
+    @Schema(description = "Текст ошибки")
     private final String error;
 
-    /**
-     * Время ошибки
-     */
+    @Schema(description = "Время ошибки")
     private final Instant timestamp;
 }

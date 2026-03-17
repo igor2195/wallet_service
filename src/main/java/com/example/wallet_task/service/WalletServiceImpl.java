@@ -5,6 +5,7 @@ import com.example.wallet_task.model.BalanceResponseDto;
 import com.example.wallet_task.model.OperationRequestDto;
 import com.example.wallet_task.model.exception.InsufficientFundsException;
 import com.example.wallet_task.model.exception.OperationUnavailableException;
+import com.example.wallet_task.model.exception.UnsupportedOperationType;
 import com.example.wallet_task.repository.WalletRepository;
 import com.example.wallet_task.service.mapper.WalletToBalanceResponseDtoMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -32,6 +33,7 @@ public class WalletServiceImpl implements WalletService {
     private static final String WITHDRAW_SUCCESS = "withdrawal successful. New balance: {}";
     private static final String OPERATION_UNAVAILABLE = "operation unavailable, please try again later";
     private static final String PROCESS_FAILED = "failed to process operation after retries for wallet {}: {}";
+    private static final String UNSUPPORTED_OPERATION = "Unsupported Operation Type";
 
     private final WalletRepository walletRepository;
     private final WalletToBalanceResponseDtoMapper mapper;
@@ -70,6 +72,8 @@ public class WalletServiceImpl implements WalletService {
                 wallet.setBalance(wallet.getBalance().subtract(request.getAmount()));
                 log.debug(WITHDRAW_SUCCESS, wallet.getBalance());
                 break;
+            default:
+                throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
         }
         return mapper.toDto(walletRepository.save(wallet));
     }
@@ -77,7 +81,7 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional(readOnly = true)
     public BalanceResponseDto getBalance(UUID walletId) {
-        Wallet wallet = walletRepository.findByIdWithOptimisticLock(walletId)
+        Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(
                         () -> new EntityNotFoundException(WALLET_NOT_FOUND.formatted(walletId))
                 );
@@ -85,7 +89,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Recover
-    public void recoverProcessOperation(CannotAcquireLockException e, OperationRequestDto request) {
+    public BalanceResponseDto recoverProcessOperation(CannotAcquireLockException e, OperationRequestDto request) {
         log.error(PROCESS_FAILED, request.getWalletId(), e.getMessage());
         throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
     }

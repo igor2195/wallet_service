@@ -1,7 +1,7 @@
 server:
   port: ${APP_PORT:8080}
   servlet:
-    context-path: /wallet-service/api/
+    context-path: /wallet-service/api
 
 app:
   wallet:
@@ -10,7 +10,6 @@ app:
       delay: ${WALLET_RETRY_DELAY:100}
       multiplier: ${WALLET_RETRY_MULTIPLIER:2}
       max-delay: ${WALLET_RETRY_MAX_DELAY:5000}
-
 
 spring:
   application:
@@ -30,7 +29,6 @@ spring:
       pool-name: "WalletHikariCP"
       validation-timeout: 5000
       connection-test-query: "SELECT 1"
-
   jpa:
     hibernate:
       ddl-auto: validate
@@ -48,9 +46,23 @@ spring:
           use_second_level_cache: false
           use_query_cache: false
     open-in-view: false
-
   liquibase:
     enabled: ${LIQUIBASE_ENABLED:true}
-    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/liquibase/db.changelog-master.xml
+    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:db/liquibase/db.changelog-master.xml}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
 
+configuration:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:YXNkZmdoamtscXdlcnR5dWlvcGZmZ2hmamdsa2poZ2Zkc2FmZ2hmZ2prbGg}
+      expiration: ${JWT_EXP:86400000}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

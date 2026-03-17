@@ -3,6 +3,7 @@ package com.example.wallet_task.config;
 import com.example.wallet_task.model.exception.BaseException;
 import com.example.wallet_task.model.exception.InsufficientFundsException;
 import com.example.wallet_task.model.exception.OperationUnavailableException;
+import com.example.wallet_task.model.exception.UnsupportedOperationType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -10,6 +11,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,6 +41,21 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(OperationUnavailableException.class)
     public ResponseEntity<Object> handleOperationUnavailableException(OperationUnavailableException e) {
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(UnsupportedOperationType.class)
+    public ResponseEntity<Object> handleUnsupportedOperationType(UnsupportedOperationType e) {
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Object> handleBadCredentialsException(BadCredentialsException e) {
+        return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException e) {
         return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 

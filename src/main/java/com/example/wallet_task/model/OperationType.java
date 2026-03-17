@@ -1,15 +1,16 @@
 package com.example.wallet_task.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
- * Доступные операции для кошелька
+ * Тип операции с кошельком
  */
+@Schema(description = "Тип операции с кошельком")
 public enum OperationType {
-    /**
-     * Пополнить
-     */
+
+    @Schema(description = "Пополнение счета")
     DEPOSIT,
-    /**
-     * Санять
-     */
+
+    @Schema(description = "Снятие со счета")
     WITHDRAW
 }

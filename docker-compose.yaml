@@ -54,6 +54,11 @@ services:
       #Liquibase
       SPRING_LIQUIBASE_ENABLED: ${LIQUIBASE_ENABLED}
       SPRING_LIQUIBASE_CHANGE_LOG: ${LIQUIBASE_CHANGE_LOG}
+
+      #Security
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: ${JWT_EXP}
+
     depends_on:
       postgres:
         condition: service_healthy
