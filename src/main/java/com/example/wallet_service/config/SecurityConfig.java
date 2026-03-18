@@ -40,7 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .httpBasic(withDefaults());
+                .httpBasic(withDefaults()); //TODO Добавить jwt
         return http.build();
     }
 
