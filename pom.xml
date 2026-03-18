@@ -10,11 +10,11 @@
 	</parent>
 
 	<groupId>com.example</groupId>
-	<artifactId>wallet_task</artifactId>
+	<artifactId>wallet_service</artifactId>
 	<version>0.0.1</version>
 
-	<name>wallet_task</name>
-	<description>wallet_task</description>
+	<name>wallet_service</name>
+	<description>wallet_service</description>
 
 
 	<properties>

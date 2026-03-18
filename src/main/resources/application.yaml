@@ -13,7 +13,7 @@ app:
 
 spring:
   application:
-    name: "wallet_task"
+    name: "wallet_service"
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wallet}
     username: ${SPRING_DATASOURCE_USERNAME:myuser}
