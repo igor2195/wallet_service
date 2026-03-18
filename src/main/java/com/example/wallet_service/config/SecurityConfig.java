@@ -26,7 +26,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -51,10 +50,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
+    public UserDetailsService userDetailsService() { //TODO не совсем хорошо (лучше хранить в БД)
         UserDetails user1 = User.builder()
                 .username("user")
-                .password(passwordEncoder().encode("password"))
+                .password(passwordEncoder().encode("user"))
                 .roles("USER")
                 .build();
 

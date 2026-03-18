@@ -41,7 +41,7 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(OperationUnavailableException.class)
     public ResponseEntity<Object> handleOperationUnavailableException(OperationUnavailableException e) {
-        return buildResponseEntity(HttpStatus.BAD_REQUEST, e.getMessage());
+        return buildResponseEntity(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(UnsupportedOperationType.class)
@@ -85,6 +85,4 @@ public class RestExceptionHandler {
                 .build();
         return new ResponseEntity<>(be, status);
     }
-
-
 }

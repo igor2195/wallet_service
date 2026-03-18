@@ -60,9 +60,9 @@ Swagger UI: http://localhost:8080/wallet-service/api/swagger-ui/index.html
 API защищено **Basic Authentication**. Используйте следующие учетные данные:
 
 
-| Роль | Логин | Пароль |
-|------|-------|--------|
-| **Пользователь** | `user` | `password` |
+| Роль | Логин | Пароль  |
+|------|-------|---------|
+| **Пользователь** | `user` | `user`  |
 | **Администратор** | `admin` | `admin` |
 
 Базовый урл методов: /wallet-service/api/v1/

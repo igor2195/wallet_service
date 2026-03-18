@@ -71,7 +71,7 @@ class WalletControllerTest {
 
         // when/then
         var a = mockMvc.perform(post("/v1/wallets")
-                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("admin", "admin"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(depositRequest)))
                 .andExpect(status().isOk())
@@ -88,6 +88,18 @@ class WalletControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(depositRequest)))
                 .andExpect(status().isUnauthorized());
+
+        verify(walletService, never()).processOperation(any());
+    }
+
+    @Test
+    void processOperation_WithoutRole_ReturnsUnauthorized() throws Exception {
+        // when/then
+        mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "user"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(depositRequest)))
+                .andExpect(status().isForbidden());
 
         verify(walletService, never()).processOperation(any());
     }
@@ -121,7 +133,7 @@ class WalletControllerTest {
 
         // when/then
         mockMvc.perform(get("/v1/wallets/{walletId}", walletId)
-                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password")))
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("admin", "admin")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.walletId").value(walletId.toString()))
                 .andExpect(jsonPath("$.balance").value(1500));
@@ -155,7 +167,7 @@ class WalletControllerTest {
 
         // when/then
         mockMvc.perform(post("/v1/wallets")
-                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("admin", "admin"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
@@ -172,7 +184,7 @@ class WalletControllerTest {
 
         // when/then
         mockMvc.perform(post("/v1/wallets")
-                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("admin", "admin"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
@@ -189,11 +201,9 @@ class WalletControllerTest {
 
         // when/then
         mockMvc.perform(post("/v1/wallets")
-                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("admin", "admin"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
-
-
 }

@@ -1,124 +1,91 @@
 package com.example.wallet_service.service;
 
-import com.example.wallet_service.annotation.WalletRetryable;
-import com.example.wallet_service.domain.Wallet;
 import com.example.wallet_service.model.BalanceResponseDto;
 import com.example.wallet_service.model.OperationRequestDto;
 import com.example.wallet_service.model.exception.InsufficientFundsException;
-import com.example.wallet_service.model.exception.OperationUnavailableException;
 import com.example.wallet_service.model.exception.UnsupportedOperationType;
+import com.example.wallet_service.repository.WalletJdbcRepository;
 import com.example.wallet_service.repository.WalletRepository;
 import com.example.wallet_service.service.mapper.WalletToBalanceResponseDtoMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.*;
-import org.springframework.retry.annotation.Recover;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
+import static com.example.wallet_service.utils.WalletConstants.*;
 import static java.util.Objects.isNull;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class WalletServiceImpl implements WalletService {
-
-    private static final String WALLET_NOT_FOUND = "wallet with id: %s not found";
-    private static final String INSUFFICIENT_FUNDS = "insufficient funds in the balance";
-    private static final String DEPOSIT_SUCCESS = "deposit successful. New balance: {}";
-    private static final String WITHDRAW_SUCCESS = "withdrawal successful. New balance: {}";
-    private static final String OPERATION_UNAVAILABLE = "operation unavailable, please try again later";
-    private static final String PROCESS_FAILED = "failed to process operation after retries for wallet {}: {}";
-    private static final String UNSUPPORTED_OPERATION = "Unsupported Operation Type";
-    private static final String ILLEGAL_EXCEPTION = "Deposit failed";
-
     private final WalletRepository walletRepository;
+    private final WalletJdbcRepository jdbcRepository;
     private final WalletToBalanceResponseDtoMapper mapper;
 
     @Override
-    @Transactional
-    @WalletRetryable
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BalanceResponseDto processOperation(OperationRequestDto request) {
         if (isNull(request.getOperationType())) {
             throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
         }
-        switch (request.getOperationType()) {
-            case DEPOSIT:
-                int depositCount = walletRepository.deposit(
-                        request.getWalletId(),
-                        request.getAmount()
-                );
-                if (depositCount == 0) {
-                    if (!walletRepository.existsById(request.getWalletId())) {
-                        throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
-                    }
-                    throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
-                }
-                break;
-            case WITHDRAW:
-                int withdrawCount = walletRepository.withdraw(
-                        request.getWalletId(),
-                        request.getAmount()
-                );
-                if (withdrawCount == 0) {
-                    if (!walletRepository.existsById(request.getWalletId())) {
-                        throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
-                    }
-                    throw new InsufficientFundsException(INSUFFICIENT_FUNDS);
-                }
-                break;
-            default:
-                throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
-        }
+        BigDecimal newBalance = processOperationInternal(request);
 
-        Wallet wallet = walletRepository.findById(request.getWalletId())
-                .orElseThrow(() -> new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId())));
-        return mapper.toDto(wallet);
+        return BalanceResponseDto.builder()
+                .walletId(request.getWalletId())
+                .balance(newBalance)
+                .build();
     }
 
     @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "walletBalances", key = "#walletId", unless = "#result == null")
     public BalanceResponseDto getBalance(UUID walletId) {
-        Wallet wallet = walletRepository.findById(walletId)
-                .orElseThrow(
-                        () -> new EntityNotFoundException(WALLET_NOT_FOUND.formatted(walletId))
+        return walletRepository.findById(walletId)
+                .map(mapper::toDto)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        WALLET_NOT_FOUND.formatted(walletId))
                 );
-        return mapper.toDto(wallet);
     }
 
 
-    @Recover
-    public BalanceResponseDto recoverProcessOperation(PessimisticLockingFailureException e,
-                                                      OperationRequestDto request) {
-        log.error("Failed to process operation for wallet {} after retries: lock error",
-                request.getWalletId());
-        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    private BigDecimal processOperationInternal(OperationRequestDto request) {
+        return switch (request.getOperationType()) {
+            case DEPOSIT -> jdbcRepository.processDeposit(request.getWalletId(), request.getAmount());
+            case WITHDRAW -> jdbcRepository.processWithdraw(request.getWalletId(), request.getAmount())
+                    .orElseThrow(() -> handleWithdrawFailure(request));
+            default -> throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
+        };
     }
 
-    @Recover
-    public BalanceResponseDto recoverProcessOperation(CannotAcquireLockException e,
-                                                      OperationRequestDto request) {
-        log.error("Failed to process operation for wallet {} after retries: cannot acquire lock",
-                request.getWalletId());
-        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    private RuntimeException handleWithdrawFailure(OperationRequestDto request) {
+        // Проверяем существование кошелька отдельно, без retry
+        Boolean exists = checkWalletExistsWithoutRetry(request.getWalletId());
+
+        if (Boolean.FALSE.equals(exists)) {
+            log.debug("Wallet not found during withdrawal: {}", request.getWalletId());
+            return new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
+        }
+
+        log.debug("Insufficient funds for wallet {}: requested {}",
+                request.getWalletId(), request.getAmount());
+        return new InsufficientFundsException(INSUFFICIENT_FUNDS);
     }
 
-    @Recover
-    public BalanceResponseDto recoverProcessOperation(DataIntegrityViolationException e,
-                                                      OperationRequestDto request) {
-        log.error("Failed to process operation for wallet {} after retries: data integrity",
-                request.getWalletId());
-        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
-    }
-
-    @Recover
-    public BalanceResponseDto recoverProcessOperation(Exception e,
-                                                      OperationRequestDto request) {
-        log.error("Failed to process operation for wallet {} after retries: {}",
-                request.getWalletId(), e.getMessage());
-        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    @Transactional(propagation = Propagation.NOT_SUPPORTED) // Без транзакции для проверки
+    public Boolean checkWalletExistsWithoutRetry(UUID walletId) {
+        try {
+            return walletRepository.existsById(walletId);
+        } catch (RuntimeException e) {
+            log.warn("Failed to check wallet existence: {}", walletId, e);
+            return null;
+        }
     }
 }
 

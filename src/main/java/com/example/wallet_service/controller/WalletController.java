@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -42,6 +43,7 @@ public class WalletController {
             @ApiResponse(responseCode = "404", description = "Кошелек не найден",
                     content = @Content(schema = @Schema(implementation = BaseException.class)))
     })
+    @PreAuthorize("hasRole('ADMIN')")
     public BalanceResponseDto processOperation(
             @Valid @RequestBody OperationRequestDto request) {
         return walletService.processOperation(request);
@@ -57,6 +59,7 @@ public class WalletController {
             @ApiResponse(responseCode = "404", description = "Кошелек не найден",
                     content = @Content(schema = @Schema(implementation = BaseException.class)))
     })
+    @PreAuthorize("hasRole('ADMIN')")
     public BalanceResponseDto getBalance(
             @Parameter(description = "UUID кошелька", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID walletId) {

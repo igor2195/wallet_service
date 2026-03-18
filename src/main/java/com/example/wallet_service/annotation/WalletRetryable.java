@@ -1,7 +1,7 @@
 package com.example.wallet_service.annotation;
 
 import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -17,9 +17,8 @@ import java.lang.annotation.*;
         retryFor = {
                 CannotAcquireLockException.class,
                 PessimisticLockingFailureException.class,
-                DataIntegrityViolationException.class,
-                OptimisticLockingFailureException.class,
-                Exception.class  // Ловим все исключения для ретрая
+                DataAccessException.class,
+                OptimisticLockingFailureException.class
         },
         maxAttemptsExpression = "${app.wallet.retry.max-attempts:5}",
         backoff = @Backoff(
@@ -27,6 +26,7 @@ import java.lang.annotation.*;
                 multiplierExpression = "${app.wallet.retry.multiplier:2}",
                 maxDelayExpression = "${app.wallet.retry.max-delay:5000}"
         )
+
 )
 public @interface WalletRetryable {
 

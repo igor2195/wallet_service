@@ -5,6 +5,9 @@ import com.example.wallet_service.model.BalanceResponseDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/**
+ * Маппер {@link Wallet} в {@link BalanceResponseDto}
+ */
 @Mapper(componentModel = "spring")
 public interface WalletToBalanceResponseDtoMapper {
 

@@ -67,14 +67,5 @@ configuration:
 
 logging:
   level:
-    org.springframework.security: DEBUG
-
-    # Для вашего сервиса
-    com.yourpackage.walletservice: DEBUG
-    # Для Spring Web (покажет маппинг запросов)
-    org.springframework.web: DEBUG
-    # Для транзакций
-    org.springframework.transaction: DEBUG
-    # Для JPA/Hibernate SQL запросов
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql: TRACE # Покажет параметры запросов
+    org.springframework.web: INFO
+    org.springframework.security: INFO
