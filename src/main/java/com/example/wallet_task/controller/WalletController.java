@@ -22,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/v1/wallets")
 @Tag(name = "Wallet Controller", description = "Управление кошельками (пополнение, снятие, просмотр баланса)")
-@SecurityRequirement(name = "bearerAuth")  // Указываем, что все методы требуют JWT
+@SecurityRequirement(name = "bearerAuth")
 public class WalletController {
 
     private final WalletService walletService;

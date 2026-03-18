@@ -8,8 +8,10 @@ spring:
     password: password
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     hikari:
-      maximum-pool-size: 5
-      connection-timeout: 30000
+      maximum-pool-size: 50  # Увеличили с 20 до 50
+      connection-timeout: 30000  # 30 секунд
+      validation-timeout: 5000
+      leak-detection-threshold: 60000
   jpa:
     show-sql: true
   liquibase:

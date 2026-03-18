@@ -1,5 +1,6 @@
 package com.example.wallet_task.service;
 
+import com.example.wallet_task.annotation.WalletRetryable;
 import com.example.wallet_task.domain.Wallet;
 import com.example.wallet_task.model.BalanceResponseDto;
 import com.example.wallet_task.model.OperationRequestDto;
@@ -11,16 +12,15 @@ import com.example.wallet_task.service.mapper.WalletToBalanceResponseDtoMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
+import org.springframework.dao.*;
 import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+
+import static java.util.Objects.isNull;
 
 @Service
 @Slf4j
@@ -34,52 +34,53 @@ public class WalletServiceImpl implements WalletService {
     private static final String OPERATION_UNAVAILABLE = "operation unavailable, please try again later";
     private static final String PROCESS_FAILED = "failed to process operation after retries for wallet {}: {}";
     private static final String UNSUPPORTED_OPERATION = "Unsupported Operation Type";
+    private static final String ILLEGAL_EXCEPTION = "Deposit failed";
 
     private final WalletRepository walletRepository;
     private final WalletToBalanceResponseDtoMapper mapper;
 
     @Override
     @Transactional
-    @Retryable(
-            retryFor = {
-                    CannotAcquireLockException.class,
-                    ObjectOptimisticLockingFailureException.class,
-                    DataIntegrityViolationException.class,
-                    org.hibernate.exception.LockTimeoutException.class
-            },
-            maxAttemptsExpression = "${app.wallet.retry.max-attempts:5}",
-            backoff = @Backoff(
-                    delayExpression = "${app.wallet.retry.delay:100}",
-                    multiplierExpression = "${app.wallet.retry.multiplier:2}",
-                    maxDelayExpression = "${app.wallet.retry.max-delay:5000}"
-            )
-    )
+    @WalletRetryable
     public BalanceResponseDto processOperation(OperationRequestDto request) {
-        Wallet wallet = walletRepository.findByIdWithPessimisticLock(request.getWalletId())
-                .orElseThrow(
-                        () -> new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()))
-                );
-
+        if (isNull(request.getOperationType())) {
+            throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
+        }
         switch (request.getOperationType()) {
             case DEPOSIT:
-                wallet.setBalance(wallet.getBalance().add(request.getAmount()));
-                log.debug(DEPOSIT_SUCCESS, wallet.getBalance());
+                int depositCount = walletRepository.deposit(
+                        request.getWalletId(),
+                        request.getAmount()
+                );
+                if (depositCount == 0) {
+                    if (!walletRepository.existsById(request.getWalletId())) {
+                        throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
+                    }
+                    throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
+                }
                 break;
             case WITHDRAW:
-                if (wallet.getBalance().compareTo(request.getAmount()) < 0) {
+                int withdrawCount = walletRepository.withdraw(
+                        request.getWalletId(),
+                        request.getAmount()
+                );
+                if (withdrawCount == 0) {
+                    if (!walletRepository.existsById(request.getWalletId())) {
+                        throw new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId()));
+                    }
                     throw new InsufficientFundsException(INSUFFICIENT_FUNDS);
                 }
-                wallet.setBalance(wallet.getBalance().subtract(request.getAmount()));
-                log.debug(WITHDRAW_SUCCESS, wallet.getBalance());
                 break;
             default:
                 throw new UnsupportedOperationType(UNSUPPORTED_OPERATION);
         }
-        return mapper.toDto(walletRepository.save(wallet));
+
+        Wallet wallet = walletRepository.findById(request.getWalletId())
+                .orElseThrow(() -> new EntityNotFoundException(WALLET_NOT_FOUND.formatted(request.getWalletId())));
+        return mapper.toDto(wallet);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public BalanceResponseDto getBalance(UUID walletId) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(
@@ -88,9 +89,36 @@ public class WalletServiceImpl implements WalletService {
         return mapper.toDto(wallet);
     }
 
+
     @Recover
-    public BalanceResponseDto recoverProcessOperation(CannotAcquireLockException e, OperationRequestDto request) {
-        log.error(PROCESS_FAILED, request.getWalletId(), e.getMessage());
+    public BalanceResponseDto recoverProcessOperation(PessimisticLockingFailureException e,
+                                                      OperationRequestDto request) {
+        log.error("Failed to process operation for wallet {} after retries: lock error",
+                request.getWalletId());
+        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    }
+
+    @Recover
+    public BalanceResponseDto recoverProcessOperation(CannotAcquireLockException e,
+                                                      OperationRequestDto request) {
+        log.error("Failed to process operation for wallet {} after retries: cannot acquire lock",
+                request.getWalletId());
+        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    }
+
+    @Recover
+    public BalanceResponseDto recoverProcessOperation(DataIntegrityViolationException e,
+                                                      OperationRequestDto request) {
+        log.error("Failed to process operation for wallet {} after retries: data integrity",
+                request.getWalletId());
+        throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
+    }
+
+    @Recover
+    public BalanceResponseDto recoverProcessOperation(Exception e,
+                                                      OperationRequestDto request) {
+        log.error("Failed to process operation for wallet {} after retries: {}",
+                request.getWalletId(), e.getMessage());
         throw new OperationUnavailableException(OPERATION_UNAVAILABLE);
     }
 }

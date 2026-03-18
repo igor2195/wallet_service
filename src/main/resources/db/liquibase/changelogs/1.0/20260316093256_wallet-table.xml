@@ -9,16 +9,13 @@
             CREATE TABLE IF NOT EXISTS public.wallet
             (
                 id            UUID          PRIMARY KEY           DEFAULT gen_random_uuid(),
-                balance       DECIMAL(19,2) NOT NULL              DEFAULT 0.00,
-                version       BIGINT        NOT NULL              DEFAULT 0
+                balance       DECIMAL(19,2) NOT NULL              DEFAULT 0.00
             );
 
             COMMENT
             ON COLUMN wallet.id IS 'Идентификатор кошелька';
             COMMENT
             ON COLUMN wallet.balance IS 'Баланс';
-            COMMENT
-            ON COLUMN wallet.version IS 'Версия записи для оптимистичной блокировки';
 
             CREATE INDEX IF NOT EXISTS idx_wallet_id ON wallet(id);
         </sql>

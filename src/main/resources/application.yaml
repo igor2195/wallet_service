@@ -35,8 +35,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        show_sql: ${HIBERNATE_SHOW_SQL:false}
-        format_sql: ${HIBERNATE_FORMAT_SQL:false}
+#        show_sql: ${HIBERNATE_SHOW_SQL:false}
+        show_sql: true
+        format_sql: true
+#        format_sql: ${HIBERNATE_FORMAT_SQL:false}
         jdbc:
           batch_size: ${HIBERNATE_BATCH_SIZE:20}
           fetch_size: ${HIBERNATE_FETCH_SIZE:50}
@@ -62,7 +64,17 @@ configuration:
       secret: ${JWT_SECRET:YXNkZmdoamtscXdlcnR5dWlvcGZmZ2hmamdsa2poZ2Zkc2FmZ2hmZ2prbGg}
       expiration: ${JWT_EXP:86400000}
 
+
 logging:
   level:
     org.springframework.security: DEBUG
+
+    # Для вашего сервиса
+    com.yourpackage.walletservice: DEBUG
+    # Для Spring Web (покажет маппинг запросов)
     org.springframework.web: DEBUG
+    # Для транзакций
+    org.springframework.transaction: DEBUG
+    # Для JPA/Hibernate SQL запросов
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE # Покажет параметры запросов

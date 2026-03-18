@@ -1,29 +1,34 @@
 package com.example.wallet_task.controller;
 
+import com.example.wallet_task.config.SecurityConfig;
 import com.example.wallet_task.model.BalanceResponseDto;
 import com.example.wallet_task.model.OperationRequestDto;
-import com.example.wallet_task.model.OperationType;
 import com.example.wallet_task.service.WalletService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.UUID;
 
+import static com.example.wallet_task.model.OperationType.DEPOSIT;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(WalletController.class)
+@Import(SecurityConfig.class)
 class WalletControllerTest {
 
     @Autowired
@@ -32,79 +37,163 @@ class WalletControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockitoBean  // Вместо @MockBean
+    @MockitoBean
     private WalletService walletService;
 
+    private UUID walletId;
+    private OperationRequestDto depositRequest;
+    private BalanceResponseDto balanceResponse;
 
-    @Test
-    void processOperation_Deposit_ReturnsOk() throws Exception {
-        // arrange
-        var request = OperationRequestDto.builder()
-                .walletId(UUID.randomUUID())
-                .operationType(OperationType.DEPOSIT)
+    @BeforeEach
+    void setUp() {
+        walletId = UUID.randomUUID();
+        depositRequest = OperationRequestDto.builder()
+                .walletId(walletId)
+                .operationType(DEPOSIT)
                 .amount(BigDecimal.valueOf(500))
                 .build();
-
-        var response = BalanceResponseDto.builder()
-                .walletId(request.getWalletId())
+        balanceResponse = BalanceResponseDto.builder()
+                .walletId(walletId)
                 .balance(BigDecimal.valueOf(1500))
                 .build();
+    }
 
-        when(walletService.processOperation(any())).thenReturn(response);
+    private String createBasicAuthHeader(String username, String password) {
+        String auth = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(auth.getBytes());
+    }
 
-        // assert
+    @Test
+    void processOperation_WithValidBasicAuth_ReturnsOk() throws Exception {
+        // given
+        when(walletService.processOperation(any(OperationRequestDto.class)))
+                .thenReturn(balanceResponse);
+
+        // when/then
+        var a = mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(depositRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
+                .andExpect(jsonPath("$.balance").value(1500));
+
+        verify(walletService, times(1)).processOperation(any(OperationRequestDto.class));
+    }
+
+    @Test
+    void processOperation_WithoutAuth_ReturnsUnauthorized() throws Exception {
+        // when/then
         mockMvc.perform(post("/v1/wallets")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(depositRequest)))
+                .andExpect(status().isUnauthorized());
+
+        verify(walletService, never()).processOperation(any());
+    }
+
+    @Test
+    void processOperation_WithInvalidBasicAuth_ReturnsUnauthorized() throws Exception {
+        // when/then
+        mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "wrongpass"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(depositRequest)))
+                .andExpect(status().isUnauthorized());
+
+        verify(walletService, never()).processOperation(any());
+    }
+
+    @Test
+    void processOperation_WithInvalidBasicAuthFormat_ReturnsUnauthorized() throws Exception {
+        // when/then
+        mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, "Basic invalid_base64")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(depositRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getBalance_WithValidBasicAuth_ReturnsOk() throws Exception {
+        // given
+        when(walletService.getBalance(walletId)).thenReturn(balanceResponse);
+
+        // when/then
+        mockMvc.perform(get("/v1/wallets/{walletId}", walletId)
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.walletId").value(request.getWalletId().toString()))
+                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
                 .andExpect(jsonPath("$.balance").value(1500));
     }
 
     @Test
-    void processOperation_InvalidRequest_ReturnsBadRequest() throws Exception {
-        // arrange
-        var request = OperationRequestDto.builder()
-                .walletId(null)
-                .operationType(OperationType.DEPOSIT)
+    void getBalance_WithoutAuth_ReturnsUnauthorized() throws Exception {
+        // when/then
+        mockMvc.perform(get("/v1/wallets/{walletId}", walletId))
+                .andExpect(status().isUnauthorized());
+
+        verify(walletService, never()).getBalance(any());
+    }
+
+    @Test
+    void getBalance_WithInvalidAuth_ReturnsUnauthorized() throws Exception {
+        // when/then
+        mockMvc.perform(get("/v1/wallets/{walletId}", walletId)
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "wrongpass")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void processOperation_WithInvalidAmount_ReturnsBadRequest() throws Exception {
+        // given - отрицательная сумма
+        OperationRequestDto invalidRequest = OperationRequestDto.builder()
+                .walletId(walletId)
+                .operationType(DEPOSIT)
                 .amount(BigDecimal.valueOf(-100))
                 .build();
 
-        // assert
+        // when/then
         mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void getBalance_ReturnsOk() throws Exception {
-        // arrange
-        UUID walletId = UUID.randomUUID();
-        var response = BalanceResponseDto.builder()
-                .walletId(walletId)
-                .balance(BigDecimal.valueOf(1000))
+    void processOperation_WithNullWalletId_ReturnsBadRequest() throws Exception {
+        // given
+        OperationRequestDto invalidRequest = OperationRequestDto.builder()
+                .walletId(null)
+                .operationType(DEPOSIT)
+                .amount(BigDecimal.valueOf(500))
                 .build();
 
-        when(walletService.getBalance(walletId)).thenReturn(response);
-
-        // assert
-        mockMvc.perform(get("/v1/wallets/{walletId}", walletId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.walletId").value(walletId.toString()))
-                .andExpect(jsonPath("$.balance").value(1000));
+        // when/then
+        mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void getBalance_WalletNotFound_ReturnsNotFound() throws Exception {
-        // arrange
-        UUID walletId = UUID.fromString("a07cd10c-fe74-4ee2-abe8-474b90db7130");
-        when(walletService.getBalance(walletId)).thenThrow(
-                new EntityNotFoundException()
-        );
+    void processOperation_WithNullOperationType_ReturnsBadRequest() throws Exception {
+        // given
+        OperationRequestDto invalidRequest = OperationRequestDto.builder()
+                .walletId(walletId)
+                .operationType(null)
+                .amount(BigDecimal.valueOf(500))
+                .build();
 
-        // assert
-        mockMvc.perform(get("/v1/wallets/{walletId}", walletId))
-                .andExpect(status().isNotFound());
+        // when/then
+        mockMvc.perform(post("/v1/wallets")
+                        .header(HttpHeaders.AUTHORIZATION, createBasicAuthHeader("user", "password"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
+
+
 }
